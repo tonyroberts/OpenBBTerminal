@@ -114,6 +114,7 @@ tenacity = "<8.0.0"  # Finviz, papermill and plotly dep. Pinned to avoid pip res
 intrinio-sdk = "^6.22.2"
 yahooquery = "^2.3.0"
 tweepy = "^4.12.1"
+watchtower = "^3.0.1"
 
 
 
