@@ -16,13 +16,19 @@ class AWSSettings:
     def aws_secret_access_key(self) -> str:
         return self.__aws_secret_access_key
 
+    @property
+    def aws_default_region(self) -> str:
+        return self.__aws_default_region
+
     def __init__(
         self,
         aws_access_key_id: str,
         aws_secret_access_key: str,
+        aws_default_region: str,
     ):
         self.__aws_access_key_id = aws_access_key_id
         self.__aws_secret_access_key = aws_secret_access_key
+        self.__aws_default_region = aws_default_region
 
 
 class AppSettings:

@@ -21,11 +21,15 @@ from openbb_terminal.config_terminal import (
     LOGGING_APP_NAME,
     LOGGING_AWS_ACCESS_KEY_ID,
     LOGGING_AWS_SECRET_ACCESS_KEY,
+    LOGGING_AWS_DEFAULT_REGION,
     LOGGING_COMMIT_HASH,
     LOGGING_FREQUENCY,
     LOGGING_HANDLERS,
     LOGGING_ROLLING_CLOCK,
     LOGGING_VERBOSITY,
+)
+from openbb_terminal.core.log.collection.cloudwatch_sender import (
+    create_cloudwatch_handler,
 )
 from openbb_terminal.core.log.generation.directories import get_log_dir
 from openbb_terminal.core.log.generation.formatter_with_exceptions import (
@@ -120,6 +124,16 @@ def add_file_handler(settings: Settings):
     logging.getLogger().addHandler(handler)
 
 
+def add_cloudwatch_handler(settings: Settings):
+    aws_settings = settings.aws_settings
+    app_settings = settings.app_settings
+    app_id = app_settings.identifier
+    handler = create_cloudwatch_handler(aws_settings=aws_settings, log_stream=app_id)
+    formatter = FormatterWithExceptions(app_settings=app_settings)
+    handler.setFormatter(formatter)
+    logging.getLogger().addHandler(handler)
+
+
 def setup_handlers(settings: Settings):
     logging_settings = settings.log_settings
     handler_list = logging_settings.handler_list
@@ -141,6 +155,8 @@ def setup_handlers(settings: Settings):
             add_noop_handler(settings=settings)
         elif handler_type == "file":
             add_file_handler(settings=settings)
+        elif handler_type == "cloudwatch":
+            add_cloudwatch_handler(settings=settings)
         else:
             logger.debug("Unknown log handler.")
 
@@ -172,6 +188,7 @@ def setup_logging(
     # AWSSettings
     aws_access_key_id = LOGGING_AWS_ACCESS_KEY_ID
     aws_secret_access_key = LOGGING_AWS_SECRET_ACCESS_KEY
+    aws_default_region = LOGGING_AWS_DEFAULT_REGION
 
     # LogSettings
     directory = get_log_dir()
@@ -191,6 +208,7 @@ def setup_logging(
         aws_settings=AWSSettings(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
+            aws_default_region=aws_default_region,
         ),
         log_settings=LogSettings(
             directory=directory,
