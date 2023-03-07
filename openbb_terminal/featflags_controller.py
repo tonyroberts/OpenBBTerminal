@@ -5,10 +5,11 @@ __docformat__ = "numpy"
 import logging
 from typing import List, Optional
 
+# IMPORTATION INTERNAL
+from openbb_terminal.core.models.preferences_model import PreferencesModel
+
 # IMPORTATION THIRDPARTY
 from openbb_terminal.core.session.current_user import get_current_user
-
-# IMPORTATION INTERNAL
 from openbb_terminal.core.session.preferences_handler import set_preference
 from openbb_terminal.custom_prompt_toolkit import NestedCompleter
 from openbb_terminal.decorators import log_start_end
@@ -25,24 +26,8 @@ logger = logging.getLogger(__name__)
 class FeatureFlagsController(BaseController):
     """Feature Flags Controller class"""
 
-    CHOICES_COMMANDS: List[str] = [
-        "retryload",
-        "tab",
-        "cls",
-        "color",
-        "ion",
-        "watermark",
-        "cmdloc",
-        "promptkit",
-        "thoughts",
-        "reporthtml",
-        "exithelp",
-        "rcontext",
-        "rich",
-        "richpanel",
-        "tbhint",
-        "overwrite",
-    ]
+    CHOICES_COMMANDS: List[str] = [c for c in PreferencesModel.__annotations__.keys()]
+
     PATH = "/featflags/"
 
     def __init__(self, queue: Optional[List[str]] = None):
@@ -60,22 +45,33 @@ class FeatureFlagsController(BaseController):
         mt = MenuText("featflags/")
         mt.add_info("_info_")
         mt.add_raw("\n")
-        mt.add_setting("retryload", current_user.preferences.RETRY_WITH_LOAD)
-        mt.add_setting("tab", current_user.preferences.USE_TABULATE_DF)
-        mt.add_setting("cls", current_user.preferences.USE_CLEAR_AFTER_CMD)
-        mt.add_setting("color", current_user.preferences.USE_COLOR)
-        mt.add_setting("promptkit", current_user.preferences.USE_PROMPT_TOOLKIT)
-        mt.add_setting("thoughts", current_user.preferences.ENABLE_THOUGHTS_DAY)
-        mt.add_setting("reporthtml", current_user.preferences.OPEN_REPORT_AS_HTML)
-        mt.add_setting("exithelp", current_user.preferences.ENABLE_EXIT_AUTO_HELP)
-        mt.add_setting("rcontext", current_user.preferences.REMEMBER_CONTEXTS)
-        mt.add_setting("rich", current_user.preferences.ENABLE_RICH)
-        mt.add_setting("richpanel", current_user.preferences.ENABLE_RICH_PANEL)
-        mt.add_setting("ion", current_user.preferences.USE_ION)
-        mt.add_setting("watermark", current_user.preferences.USE_WATERMARK)
-        mt.add_setting("cmdloc", current_user.preferences.USE_CMD_LOCATION_FIGURE)
-        mt.add_setting("tbhint", current_user.preferences.TOOLBAR_HINT)
-        mt.add_setting("overwrite", current_user.preferences.FILE_OVERWRITE)
+        # mt.add_setting("retryload", current_user.preferences.RETRY_WITH_LOAD)
+        # mt.add_setting("tab", current_user.preferences.USE_TABULATE_DF)
+        # mt.add_setting("cls", current_user.preferences.USE_CLEAR_AFTER_CMD)
+        # mt.add_setting("color", current_user.preferences.USE_COLOR)
+        # mt.add_setting("promptkit", current_user.preferences.USE_PROMPT_TOOLKIT)
+        # mt.add_setting("thoughts", current_user.preferences.ENABLE_THOUGHTS_DAY)
+        # mt.add_setting("reporthtml", current_user.preferences.OPEN_REPORT_AS_HTML)
+        # mt.add_setting("exithelp", current_user.preferences.ENABLE_EXIT_AUTO_HELP)
+        # mt.add_setting("rcontext", current_user.preferences.REMEMBER_CONTEXTS)
+        # mt.add_setting("rich", current_user.preferences.ENABLE_RICH)
+        # mt.add_setting("richpanel", current_user.preferences.ENABLE_RICH_PANEL)
+        # mt.add_setting("ion", current_user.preferences.USE_ION)
+        # mt.add_setting("watermark", current_user.preferences.USE_WATERMARK)
+        # mt.add_setting("cmdloc", current_user.preferences.USE_CMD_LOCATION_FIGURE)
+        # mt.add_setting("tbhint", current_user.preferences.TOOLBAR_HINT)
+        # mt.add_setting("overwrite", current_user.preferences.FILE_OVERWRITE)
+
+        # automatically add the settings  by looping over the CHOICES_COMMANDS and the preferences model
+        for choice in self.CHOICES_COMMANDS:
+            attribute = getattr(current_user.preferences, choice)
+            print(attribute)
+            try:
+                help = attribute.metadata.get("help")
+            except Exception as e:
+                print(e)
+            # access the attribute field
+            mt.add_raw(f"{choice}: {attribute} {help}\n")
 
         console.print(text=mt.menu_text, menu="Feature Flags")
 

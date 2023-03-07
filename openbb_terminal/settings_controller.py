@@ -18,6 +18,7 @@ from openbb_terminal.core.config.paths import (
     SETTINGS_ENV_FILE,
     USER_DATA_SOURCES_DEFAULT_FILE,
 )
+from openbb_terminal.core.models.preferences_model import PreferencesModel
 from openbb_terminal.core.session.current_user import get_current_user
 from openbb_terminal.core.session.preferences_handler import set_preference
 from openbb_terminal.custom_prompt_toolkit import NestedCompleter
@@ -41,25 +42,10 @@ logger = logging.getLogger(__name__)
 class SettingsController(BaseController):
     """Settings Controller class"""
 
-    CHOICES_COMMANDS: List[str] = [
-        "dt",
-        "autoscaling",
-        "dpi",
-        "backend",
-        "height",
-        "width",
-        "pheight",
-        "pwidth",
-        "monitor",
-        "lang",
-        "tz",
-        "userdata",
-        "source",
-        "flair",
-        "colors",
-        "tbnews",
-        "tweetnews",
-    ]
+    # replace the CHOICES_COMMANDS by auto-generated choices from the PreferencesModel
+    CHOICES_COMMANDS: List[str] = [c for c in PreferencesModel.__annotations__.keys()]
+    print(CHOICES_COMMANDS)
+
     PATH = "/settings/"
     CHOICES_GENERATION = True
 
