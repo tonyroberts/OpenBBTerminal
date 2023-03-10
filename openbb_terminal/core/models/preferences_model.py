@@ -1,5 +1,6 @@
 import os
 from dataclasses import field
+from pathlib import Path
 from typing import Optional
 
 from pydantic import NonNegativeInt, PositiveFloat, PositiveInt
@@ -145,18 +146,16 @@ class PreferencesModel:
     RICH_STYLE: str = field(default="dark", metadata={"help": "rich style"})
 
     # PATHS
-    # PREFERRED_DATA_SOURCE_FILE: str = field(
-    #     default=str(USER_DATA_SOURCES_DEFAULT_FILE),
-    #     metadata={"help": "specify data source file"},
-    # )
-    # GUESS_EASTER_EGG_FILE: str = field(
-    #     default=os.getcwd() + os.path.sep + "guess_game.json",
-    #     metadata={"help": "easter egg file"},
-    # )
-    # USER_DATA_DIRECTORY = field(
-    #     default=str(HOME_DIRECTORY / "OpenBBUserData"),
-    #     metadata={"help": "set folder to store user data"},
-    # )
+    PREFERRED_DATA_SOURCE_FILE: str = field(
+        default=str(USER_DATA_SOURCES_DEFAULT_FILE),
+        metadata={"help": "specify data source file"},
+    )
+    GUESS_EASTER_EGG_FILE: str = field(
+        default=os.getcwd() + os.path.sep + "guess_game.json",
+        metadata={"help": "easter egg file"},
+    )
+    # create a Path field with a path type hint
+
     # USER_EXPORTS_DIRECTORY = field(
     #     # combine the default user data directory with the exports folder
     #     # the user data directory is the default value for USER_DATA_DIRECTORY
@@ -219,8 +218,6 @@ class PreferencesModel:
     #         raise ValueError("Color not supported")
 
     # PATHS
-    PREFERRED_DATA_SOURCE_FILE: str = str(USER_DATA_SOURCES_DEFAULT_FILE)
-    GUESS_EASTER_EGG_FILE: str = os.getcwd() + os.path.sep + "guess_game.json"
     USER_DATA_DIRECTORY = HOME_DIRECTORY / "OpenBBUserData"
     USER_EXPORTS_DIRECTORY = USER_DATA_DIRECTORY / "exports"
     USER_CUSTOM_IMPORTS_DIRECTORY = USER_DATA_DIRECTORY / "custom_imports"

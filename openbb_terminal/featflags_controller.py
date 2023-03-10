@@ -2,8 +2,11 @@
 __docformat__ = "numpy"
 
 # IMPORTATION STANDARD
+import argparse
 import logging
 from typing import List, Optional
+
+from pydantic import ValidationError
 
 # IMPORTATION INTERNAL
 from openbb_terminal.core.models.preferences_model import PreferencesModel
@@ -24,14 +27,16 @@ logger = logging.getLogger(__name__)
 
 
 class FeatureFlagsController(BaseController):
-    """Feature Flags Controller class"""
+    """Feature Flags Controller class."""
 
     CHOICES_COMMANDS: List[str] = [c for c in PreferencesModel.__annotations__.keys()]
+    # add set to the list of commands
+    CHOICES_COMMANDS.append("set")
 
     PATH = "/featflags/"
 
     def __init__(self, queue: Optional[List[str]] = None):
-        """Constructor"""
+        """Constructor."""
         super().__init__(queue)
 
         if session and get_current_user().preferences.USE_PROMPT_TOOLKIT:
@@ -39,26 +44,62 @@ class FeatureFlagsController(BaseController):
             self.completer = NestedCompleter.from_nested_dict(choices)
 
     def print_help(self):
-        """Print help"""
+        """Print help."""
         current_user = get_current_user()
 
         mt = MenuText("featflags/")
         mt.add_info("_info_")
         mt.add_raw("\n")
 
-        # automatically add the settings  by looping over the CHOICES_COMMANDS and the preferences model
         for (
             pref_name,
             pref_field,
         ) in current_user.preferences.__dataclass_fields__.items():
-            help = pref_field.metadata.get("help")
+            help_message = pref_field.metadata.get("help")
             pref_value = getattr(current_user.preferences, pref_name)
-            mt.add_raw(f"{pref_name}: {pref_value} {help}\n")
+            mt.add_raw(f"{pref_name}: {pref_value} {help_message}\n")
 
-        console.print(text=mt.menu_text, menu="Feature Flags")
+        mt.add_raw("\n")
+        mt.add_cmd("set")
+        console.print(text=mt.menu_text, menu="Settings")
 
-    def call_overwrite(self, _):
-        """Process overwrite command"""
-        set_preference(
-            "OPENBB_FILE_OVERWITE", not get_current_user().preferences.FILE_OVERWRITE
+    # @log_start_end(logger)
+    def call_set(self, other_args: List[str]):
+        """Process set command"""
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            prog="set",
+            description="Set a preference",
         )
+        parser.add_argument(
+            "preference",
+            choices=self.CHOICES_COMMANDS,
+            help="The preference to set",
+        )
+        parser.add_argument(
+            "value",
+            help="The value to set the preference to",
+        )
+
+        if other_args[0] not in self.CHOICES_COMMANDS:
+            console.print(f"[red] {other_args[0]} is not a valid preference[/red]")
+            return
+
+        ns_parser = self.parse_simple_args(parser, other_args)
+
+        if ns_parser:
+            try:
+                set_preference(
+                    f"OPENBB_{ns_parser.preference}",
+                    ns_parser.value,
+                )
+            except ValidationError:
+                default_value_type = type(
+                    getattr(get_current_user().preferences, other_args[0])
+                )
+                console.print(
+                    f"[red] Value {ns_parser.value} is not valid. It should be of type {default_value_type}[/red]"
+                )
+                # make sure to return here, otherwise the value will be set
+                return
