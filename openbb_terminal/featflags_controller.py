@@ -30,7 +30,6 @@ class FeatureFlagsController(BaseController):
     """Feature Flags Controller class."""
 
     CHOICES_COMMANDS: List[str] = [c for c in PreferencesModel.__annotations__.keys()]
-    # add set to the list of commands
     CHOICES_COMMANDS.append("set")
 
     PATH = "/featflags/"
@@ -57,15 +56,22 @@ class FeatureFlagsController(BaseController):
         ) in current_user.preferences.__dataclass_fields__.items():
             help_message = pref_field.metadata.get("help")
             pref_value = getattr(current_user.preferences, pref_name)
-            mt.add_raw(f"{pref_name}: {pref_value} {help_message}\n")
+            mt.add_raw(
+                f"[cmds]{pref_name}[/cmds]: [yellow]{pref_value}[/yellow] {help_message}\n"
+            )
+
+            mt.add_raw("\n")
 
         mt.add_raw("\n")
-        mt.add_cmd("set")
+        mt.add_raw(
+            "    [cmds]featflags/set[/cmds] [cmds]preference[/cmds] [cmds]value[/cmds]\n"
+        )
+
         console.print(text=mt.menu_text, menu="Settings")
 
     # @log_start_end(logger)
     def call_set(self, other_args: List[str]):
-        """Process set command"""
+        """Process set command."""
         parser = argparse.ArgumentParser(
             add_help=False,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -82,24 +88,36 @@ class FeatureFlagsController(BaseController):
             help="The value to set the preference to",
         )
 
-        if other_args[0] not in self.CHOICES_COMMANDS:
-            console.print(f"[red] {other_args[0]} is not a valid preference[/red]")
+        if not other_args or "-h" in other_args:
+            help_txt = parser.format_help()
+            console.print(f"[help]{help_txt}[/help]")
+            return
+
+        elif other_args[0] not in self.CHOICES_COMMANDS:
+            console.print(
+                f"""[red]"{other_args[0]}" is not a valid preference[/red]."""
+            )
             return
 
         ns_parser = self.parse_simple_args(parser, other_args)
 
         if ns_parser:
             try:
+                default_value_type = type(
+                    getattr(get_current_user().preferences, other_args[0])
+                )
+                default_value_type(ns_parser.value)
+            except (ValueError, ValidationError):
+                console.print(
+                    f"""[red]Value "{ns_parser.value}" is not valid.[/red]""",
+                    f"""[red]It should be of type {default_value_type}[/red]""",
+                )
+            else:
                 set_preference(
                     f"OPENBB_{ns_parser.preference}",
                     ns_parser.value,
                 )
-            except ValidationError:
-                default_value_type = type(
-                    getattr(get_current_user().preferences, other_args[0])
-                )
+
                 console.print(
-                    f"[red] Value {ns_parser.value} is not valid. It should be of type {default_value_type}[/red]"
+                    f"[green] {ns_parser.preference} set to {ns_parser.value}[/green]"
                 )
-                # make sure to return here, otherwise the value will be set
-                return
