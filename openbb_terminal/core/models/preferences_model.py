@@ -102,9 +102,7 @@ class PreferencesModel:
     ENABLE_CHECK_API: bool = field(
         default=True, metadata={"help": "check api before running command"}
     )
-    LOG_COLLECTION: bool = field(
-        default=False, metadata={"help": "enable log collection"}
-    )
+    LOG_COLLECT: bool = field(default=False, metadata={"help": "enable log collection"})
     TOOLBAR_HINT: bool = field(
         default=True, metadata={"help": "displays usage hints in the bottom toolbar"}
     )
