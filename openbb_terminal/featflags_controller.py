@@ -1,12 +1,17 @@
 """Feature Flags Controller Module"""
 __docformat__ = "numpy"
 
-# IMPORTATION STANDARD
 import argparse
 import logging
+
+# IMPORTATION STANDARD
+import os
 from typing import List, Optional
 
+import pytz
 from pydantic import ValidationError
+
+from openbb_terminal import feature_flags as obbff
 
 # IMPORTATION INTERNAL
 from openbb_terminal.core.models.preferences_model import PreferencesModel
@@ -29,17 +34,27 @@ logger = logging.getLogger(__name__)
 class FeatureFlagsController(BaseController):
     """Feature Flags Controller class."""
 
-    CHOICES_COMMANDS: List[str] = [c for c in PreferencesModel.__annotations__.keys()]
+    CHOICES_COMMANDS: List[str] = list(PreferencesModel.__annotations__.keys())
     CHOICES_COMMANDS.append("set")
 
     PATH = "/featflags/"
+
+    languages_available = [
+        lang.strip(".yml")
+        for lang in os.listdir(obbff.i18n_dict_location)
+        if lang.endswith(".yml")
+    ]
 
     def __init__(self, queue: Optional[List[str]] = None):
         """Constructor."""
         super().__init__(queue)
 
         if session and get_current_user().preferences.USE_PROMPT_TOOLKIT:
-            choices: dict = {c: {} for c in self.controller_choices}
+            choices: dict = {"set": {}}
+            choices["set"] = {c: {} for c in self.CHOICES_COMMANDS[:-1]}
+            choices["set"]["USE_LANGUAGE"] = {c: None for c in self.languages_available}
+            choices["set"]["TIMEZONE"] = {c: None for c in pytz.all_timezones}
+
             self.completer = NestedCompleter.from_nested_dict(choices)
 
     def print_help(self):
@@ -79,12 +94,12 @@ class FeatureFlagsController(BaseController):
             description="Set a preference",
         )
         parser.add_argument(
-            "preference",
-            choices=self.CHOICES_COMMANDS,
+            dest="preference",
+            choices=self.CHOICES_COMMANDS[:-1],
             help="The preference to set",
         )
         parser.add_argument(
-            "value",
+            dest="value",
             help="The value to set the preference to",
         )
 
@@ -119,5 +134,5 @@ class FeatureFlagsController(BaseController):
                 )
 
                 console.print(
-                    f"[green] {ns_parser.preference} set to {ns_parser.value}[/green]"
+                    f"[green]{ns_parser.preference} set to {ns_parser.value}[/green]"
                 )
