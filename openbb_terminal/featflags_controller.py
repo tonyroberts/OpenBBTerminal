@@ -41,10 +41,6 @@ class FeatureFlagsController(BaseController):
 
         if session and get_current_user().preferences.USE_PROMPT_TOOLKIT:
             self.choices: dict = self.choices_default
-            #     choices: dict = {"set": {}}
-            #     choices["set"] = {c: {} for c in self.CHOICES_COMMANDS[:-1]}
-
-            #     self.completer = NestedCompleter.from_nested_dict(choices)
             self.completer = NestedCompleter.from_nested_dict(self.choices)  # type: ignore
 
     def print_help(self):
