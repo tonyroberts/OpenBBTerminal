@@ -48,6 +48,9 @@ class FeatureFlagsController(BaseController):
         current_user = get_current_user()
 
         mt = MenuText("featflags/")
+        mt.add_cmd("set")
+        mt.add_raw("\n")
+
         mt.add_info("_info_")
         mt.add_raw("\n")
 
@@ -64,9 +67,6 @@ class FeatureFlagsController(BaseController):
             )
 
             mt.add_raw("\n")
-
-        mt.add_raw("\n")
-        mt.add_cmd("set")
 
         console.print(text=mt.menu_text, menu="Settings")
 
