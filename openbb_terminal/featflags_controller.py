@@ -71,7 +71,7 @@ class FeatureFlagsController(BaseController):
             help_message = pref_field.metadata.get("help")
             pref_value = getattr(current_user.preferences, pref_name)
             mt.add_raw(
-                f"[cmds]    {pref_name}[/cmds]: [yellow]{pref_value}[/yellow] {help_message}"
+                f"[cmds]    {pref_name}[/cmds]: {help_message} [yellow]{pref_value}[/yellow]"
             )
 
             mt.add_raw("\n")
