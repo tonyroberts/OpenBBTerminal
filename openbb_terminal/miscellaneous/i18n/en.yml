@@ -44,8 +44,8 @@ en:
   sources/_info_: Get and set default data sources
   sources/get: get available data sources associated with command
   sources/set: set default data source for a command
-  featflags/_info_: Feature flags through environment variables
-  featflags/set: Set a preference
+  featflags/_info_: Available settings
+  featflags/set: Use this command to change settings
   settings/_info_: Settings through environment variables
   settings/colors: set your own terminal colors
   settings/autoscaling: plot autoscaling

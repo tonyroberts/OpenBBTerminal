@@ -97,6 +97,7 @@ class FeatureFlagsController(BaseController):
             choices=self.CHOICES_COMMANDS[:-1],
             help="The name of preference to set",
             required="-h" not in other_args and "--help" not in other_args,
+            metavar="NAME",
         )
         parser.add_argument(
             "--value",
