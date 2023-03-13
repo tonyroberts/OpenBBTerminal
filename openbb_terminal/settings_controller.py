@@ -44,7 +44,7 @@ class SettingsController(BaseController):
     """Settings Controller class"""
 
     # replace the CHOICES_COMMANDS by auto-generated choices from the PreferencesModel
-    CHOICES_COMMANDS: List[str] = [c for c in PreferencesModel.__annotations__.keys()]
+    CHOICES_COMMANDS: List[str] = [c for c in PreferencesModel.__annotations__]
 
     PATH = "/settings/"
     CHOICES_GENERATION = True

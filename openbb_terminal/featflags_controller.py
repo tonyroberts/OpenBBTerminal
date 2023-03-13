@@ -11,7 +11,7 @@ from typing import List, Optional
 import pytz
 from pydantic import ValidationError
 
-from openbb_terminal import feature_flags as obbff
+from openbb_terminal import config_terminal as cfg
 
 # IMPORTATION INTERNAL
 from openbb_terminal.core.models.preferences_model import PreferencesModel
@@ -41,7 +41,7 @@ class FeatureFlagsController(BaseController):
 
     languages_available = [
         lang.strip(".yml")
-        for lang in os.listdir(obbff.i18n_dict_location)
+        for lang in os.listdir(cfg.i18n_dict_location)
         if lang.endswith(".yml")
     ]
 
@@ -84,7 +84,7 @@ class FeatureFlagsController(BaseController):
 
         console.print(text=mt.menu_text, menu="Settings")
 
-    # @log_start_end(logger)
+    @log_start_end(logger)
     def call_set(self, other_args: List[str]):
         """Process set command."""
         parser = argparse.ArgumentParser(
