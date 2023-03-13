@@ -84,7 +84,7 @@ class FeatureFlagsController(BaseController):
 
         console.print(text=mt.menu_text, menu="Settings")
 
-    @log_start_end(logger)
+    @log_start_end(log=logger)
     def call_set(self, other_args: List[str]):
         """Process set command."""
         parser = argparse.ArgumentParser(
