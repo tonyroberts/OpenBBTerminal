@@ -45,21 +45,7 @@ en:
   sources/get: get available data sources associated with command
   sources/set: set default data source for a command
   featflags/_info_: Feature flags through environment variables
-  featflags/retryload: retry misspelled commands with load first
-  featflags/tab: use tabulate to print dataframes
-  featflags/cls: clear console after each command
-  featflags/color: use coloring features
-  featflags/promptkit: enable prompt toolkit (autocomplete and history)
-  featflags/thoughts: thoughts of the day
-  featflags/reporthtml: open report as HTML otherwise notebook
-  featflags/exithelp: automatically print help when quitting menu
-  featflags/rcontext: remember contexts loaded params during session
-  featflags/rich: colorful rich terminal
-  featflags/richpanel: colorful rich terminal panel
-  featflags/ion: interactive matplotlib mode
-  featflags/watermark: watermark in figures
-  featflags/cmdloc: command location displayed in figures
-  featflags/tbhint: displays usage hints in the bottom toolbar
+  featflags/set: Set a preference
   settings/_info_: Settings through environment variables
   settings/colors: set your own terminal colors
   settings/autoscaling: plot autoscaling

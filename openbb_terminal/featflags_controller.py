@@ -52,8 +52,6 @@ class FeatureFlagsController(BaseController):
         if session and get_current_user().preferences.USE_PROMPT_TOOLKIT:
             choices: dict = {"set": {}}
             choices["set"] = {c: {} for c in self.CHOICES_COMMANDS[:-1]}
-            choices["set"]["USE_LANGUAGE"] = {c: None for c in self.languages_available}
-            choices["set"]["TIMEZONE"] = {c: None for c in pytz.all_timezones}
 
             self.completer = NestedCompleter.from_nested_dict(choices)
 
@@ -65,22 +63,22 @@ class FeatureFlagsController(BaseController):
         mt.add_info("_info_")
         mt.add_raw("\n")
 
+        available_preferences = current_user.preferences.__dataclass_fields__.items()
+        available_preferences = sorted(available_preferences)
         for (
             pref_name,
             pref_field,
-        ) in current_user.preferences.__dataclass_fields__.items():
+        ) in available_preferences:
             help_message = pref_field.metadata.get("help")
             pref_value = getattr(current_user.preferences, pref_name)
             mt.add_raw(
-                f"[cmds]{pref_name}[/cmds]: [yellow]{pref_value}[/yellow] {help_message}\n"
+                f"[cmds]    {pref_name}[/cmds]: [yellow]{pref_value}[/yellow] {help_message}"
             )
 
             mt.add_raw("\n")
 
         mt.add_raw("\n")
-        mt.add_raw(
-            "    [cmds]featflags/set[/cmds] [cmds]preference[/cmds] [cmds]value[/cmds]\n"
-        )
+        mt.add_cmd("set")
 
         console.print(text=mt.menu_text, menu="Settings")
 
@@ -94,45 +92,38 @@ class FeatureFlagsController(BaseController):
             description="Set a preference",
         )
         parser.add_argument(
-            dest="preference",
+            "--name",
+            "-n",
+            dest="name",
             choices=self.CHOICES_COMMANDS[:-1],
-            help="The preference to set",
+            help="The name of preference to set",
+            required="-h" not in other_args and "--help" not in other_args,
         )
         parser.add_argument(
+            "--value",
+            "-v",
             dest="value",
             help="The value to set the preference to",
+            required="-h" not in other_args and "--help" not in other_args,
         )
 
-        if not other_args or "-h" in other_args:
-            help_txt = parser.format_help()
-            console.print(f"[help]{help_txt}[/help]")
-            return
-
-        elif other_args[0] not in self.CHOICES_COMMANDS:
-            console.print(
-                f"""[red]"{other_args[0]}" is not a valid preference[/red]."""
-            )
-            return
-
+        if other_args and "-" not in other_args[0][0]:
+            other_args.insert(0, "-n")
         ns_parser = self.parse_simple_args(parser, other_args)
 
         if ns_parser:
             try:
-                default_value_type = type(
-                    getattr(get_current_user().preferences, other_args[0])
-                )
-                default_value_type(ns_parser.value)
-            except (ValueError, ValidationError):
-                console.print(
-                    f"""[red]Value "{ns_parser.value}" is not valid.[/red]""",
-                    f"""[red]It should be of type {default_value_type}[/red]""",
-                )
-            else:
                 set_preference(
-                    f"OPENBB_{ns_parser.preference}",
+                    f"OPENBB_{ns_parser.name}",
                     ns_parser.value,
                 )
-
                 console.print(
-                    f"[green]{ns_parser.preference} set to {ns_parser.value}[/green]"
+                    f"[green]{ns_parser.name} set to {ns_parser.value}[/green]"
+                )
+
+            except ValidationError as error:
+                err = error.errors()[0]
+                msg = err.get("msg", "").capitalize()
+                console.print(
+                    f"""[red]{msg}.[/red]""",
                 )
