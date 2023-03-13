@@ -657,6 +657,11 @@ def valid_hour(hr: str) -> int:
     return new_hr
 
 
+def lower_str(string: str) -> str:
+    """Convert string to lowercase."""
+    return string.lower()
+
+
 def us_market_holidays(years) -> list:
     """Get US market holidays."""
     if isinstance(years, int):
@@ -1970,7 +1975,7 @@ def update_news_from_tweet_to_be_displayed() -> str:
                         url = f"https://twitter.com/x/status/{last_tweet.id_str}"
 
             # In case the handle provided doesn't exist, we skip it
-            except tweepy.errors.NotFound:
+            except (tweepy.errors.NotFound, tweepy.errors.Unauthorized):
                 pass
 
         if last_tweet_dt and news_tweet_to_use:

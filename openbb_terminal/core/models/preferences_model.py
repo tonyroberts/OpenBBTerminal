@@ -44,6 +44,8 @@ class PreferencesModel:
     )
 
     # FEATURE FLAGS
+    # Whether to open plot image exports after they are created
+    PLOT_OPEN_EXPORT: bool = field(default=False, metadata={"help": "open plot export"})
     SYNC_ENABLED: bool = field(default=True, metadata={"help": "sync enabled"})
     FILE_OVERWRITE: bool = field(
         default=False, metadata={"help": "featflags/overwrite"}
