@@ -8,7 +8,6 @@ import logging
 import os
 from typing import List, Optional
 
-import pytz
 from pydantic import ValidationError
 
 from openbb_terminal import config_terminal as cfg
