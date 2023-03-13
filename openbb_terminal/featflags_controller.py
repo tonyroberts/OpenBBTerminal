@@ -5,12 +5,9 @@ import argparse
 import logging
 
 # IMPORTATION STANDARD
-import os
 from typing import List, Optional
 
 from pydantic import ValidationError
-
-from openbb_terminal import config_terminal as cfg
 
 # IMPORTATION INTERNAL
 from openbb_terminal.core.models.preferences_model import PreferencesModel
@@ -33,26 +30,22 @@ logger = logging.getLogger(__name__)
 class FeatureFlagsController(BaseController):
     """Feature Flags Controller class."""
 
-    CHOICES_COMMANDS: List[str] = list(PreferencesModel.__annotations__.keys())
-    CHOICES_COMMANDS.append("set")
-
+    CHOICES_COMMANDS: List[str] = ["set"]
+    PREFERENCES = list(PreferencesModel.__annotations__.keys())
     PATH = "/featflags/"
-
-    languages_available = [
-        lang.strip(".yml")
-        for lang in os.listdir(cfg.i18n_dict_location)
-        if lang.endswith(".yml")
-    ]
+    CHOICES_GENERATION = True
 
     def __init__(self, queue: Optional[List[str]] = None):
         """Constructor."""
         super().__init__(queue)
 
         if session and get_current_user().preferences.USE_PROMPT_TOOLKIT:
-            choices: dict = {"set": {}}
-            choices["set"] = {c: {} for c in self.CHOICES_COMMANDS[:-1]}
+            self.choices: dict = self.choices_default
+            #     choices: dict = {"set": {}}
+            #     choices["set"] = {c: {} for c in self.CHOICES_COMMANDS[:-1]}
 
-            self.completer = NestedCompleter.from_nested_dict(choices)
+            #     self.completer = NestedCompleter.from_nested_dict(choices)
+            self.completer = NestedCompleter.from_nested_dict(self.choices)  # type: ignore
 
     def print_help(self):
         """Print help."""
@@ -94,7 +87,7 @@ class FeatureFlagsController(BaseController):
             "--name",
             "-n",
             dest="name",
-            choices=self.CHOICES_COMMANDS[:-1],
+            choices=self.PREFERENCES,
             help="The name of preference to set",
             required="-h" not in other_args and "--help" not in other_args,
             metavar="NAME",
