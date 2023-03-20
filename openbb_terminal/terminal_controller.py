@@ -93,6 +93,7 @@ class TerminalController(BaseController):
         "guess",
         "news",
         "intro",
+        "gpt",
     ]
     CHOICES_MENUS = [
         "stocks",
@@ -191,6 +192,7 @@ class TerminalController(BaseController):
         mt.add_cmd("record")
         mt.add_cmd("stop")
         mt.add_cmd("exe")
+        mt.add_cmd("gpt")
         mt.add_raw("\n")
         mt.add_info("_main_menu_")
         mt.add_menu("stocks")
@@ -248,6 +250,56 @@ class TerminalController(BaseController):
                 export=news_parser.export,
                 sheet_name=news_parser.sheet_name,
             )
+
+    def call_gpt(self, other_args: List[str]) -> None:
+        """Process gpt command."""
+        import json
+        current_user = get_current_user()
+
+        if self.GUESS_NUMBER_TRIES_LEFT == 0 and self.GUESS_SUM_SCORE < 0.01:
+            parser_exe = argparse.ArgumentParser(
+                add_help=False,
+                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+                prog="guess",
+                description="Guess command to achieve task successfully.",
+            )
+            parser_exe.add_argument(
+                "-s",
+                "--sentence",
+                type=str,
+                help="Sentence to try to transform into command.",
+                dest="sentence",
+                nargs="+",
+            )
+            if other_args and "-" not in other_args[0][0]:
+                other_args.insert(0, "-s")
+                ns_parser = self.parse_simple_args(parser_exe, other_args)
+
+        try:
+            with open(current_user.preferences.GUESS_EASTER_EGG_FILE) as f:
+                # Load the file as a JSON document
+                json_doc = json.load(f)
+
+                output = difflib.get_close_matches(
+                    " ".join(ns_parser.sentence),
+                    list(json_doc.keys()),
+                    n=1,
+                    cutoff=0.6,
+                )
+
+                if output:
+                    task = output[0]
+                    self.queue = json_doc[task].split("/") + ["home"]
+
+                else:
+                    console.print("I do not understand.\n")
+
+        except Exception as e:
+            console.print(
+                f"[red]Failed to load training data: "
+                f"{current_user.preferences.GUESS_EASTER_EGG_FILE}[/red]"
+            )
+            console.print(f"[red]{e}[/red]")
 
     def call_guess(self, other_args: List[str]) -> None:
         """Process guess command."""
@@ -902,6 +954,94 @@ def terminal(jobs_cmds: Optional[List[str]] = None, test_mode=False):
         t_controller.print_help()
         check_for_updates()
 
+        WHISPERAI = False
+
+        # just a proof of concept
+        if WHISPERAI:
+            import argparse
+            import io
+            import os
+            import speech_recognition as sr
+            import whisper
+            import torch
+
+            from datetime import datetime, timedelta
+            from queue import Queue
+            from tempfile import NamedTemporaryFile
+            from time import sleep
+            from sys import platform
+
+            parser = argparse.ArgumentParser()
+            args = parser.parse_args()
+            args.model = "tiny"
+            args.non_english = False
+            args.energy_threshold = 1000
+            args.record_timeout = 4
+            args.phrase_timeout = 4
+            args.default_microphone = 'pulse'
+
+            # The last time a recording was retreived from the queue.
+            phrase_time = None
+            # Current raw audio bytes.
+            last_sample = bytes()
+            # Thread safe Queue for passing data from the threaded recording callback.
+            data_queue = Queue()
+            # We use SpeechRecognizer to record our audio because it has a nice feauture where it can detect when speech ends.
+            recorder = sr.Recognizer()
+            recorder.energy_threshold = args.energy_threshold
+            # Definitely do this, dynamic energy compensation lowers the energy threshold dramtically to a point where the SpeechRecognizer never stops recording.
+            recorder.dynamic_energy_threshold = False
+
+            # Important for linux users.
+            # Prevents permanent application hang and crash by using the wrong Microphone
+            if 'linux' in platform:
+                mic_name = args.default_microphone
+                if not mic_name or mic_name == 'list':
+                    print("Available microphone devices are: ")
+                    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+                        print(f"Microphone with name \"{name}\" found")
+                    return
+                else:
+                    for index, name in enumerate(sr.Microphone.list_microphone_names()):
+                        if mic_name in name:
+                            source = sr.Microphone(sample_rate=16000, device_index=index)
+                            break
+            else:
+                source = sr.Microphone(sample_rate=16000)
+
+            # Load / Download model
+            model = args.model
+            if args.model != "large" and not args.non_english:
+                model = model + ".en"
+            audio_model = whisper.load_model(model)
+
+            record_timeout = args.record_timeout
+            phrase_timeout = args.phrase_timeout
+
+            temp_file = NamedTemporaryFile().name
+            transcription = ['']
+
+            with source:
+                recorder.adjust_for_ambient_noise(source)
+
+            def record_callback(_, audio:sr.AudioData) -> None:
+                """
+                Threaded callback function to recieve audio data when recordings finish.
+                audio: An AudioData containing the recorded bytes.
+                """
+                # Grab the raw bytes and push it into the thread safe queue.
+                data = audio.get_raw_data()
+                data_queue.put(data)
+
+            # Create a background thread that will pass us raw audio bytes.
+            # We could do this manually but SpeechRecognizer provides a nice helper.
+            recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
+
+            with open(current_user.preferences.GUESS_EASTER_EGG_FILE) as f:
+                import json
+                # Load the file as a JSON document
+                json_doc = json.load(f)
+
     while ret_code:
         if current_user.preferences.ENABLE_QUICK_EXIT:
             console.print("Quick exit enabled")
@@ -924,98 +1064,191 @@ def terminal(jobs_cmds: Optional[List[str]] = None, test_mode=False):
 
         # Get input command from user
         else:
-            try:
-                # Get input from user using auto-completion
-                if session and current_user.preferences.USE_PROMPT_TOOLKIT:
-                    # Check if tweet news is enabled
-                    if current_user.preferences.TOOLBAR_TWEET_NEWS:
-                        news_tweet = update_news_from_tweet_to_be_displayed()
+            if WHISPERAI:
+                while transcription[0] == "":
+                    try:
+                        now = datetime.utcnow()
+                        # Pull raw recorded audio from the queue.
+                        if not data_queue.empty():
+                            phrase_complete = False
+                            # If enough time has passed between recordings, consider the phrase complete.
+                            # Clear the current working audio buffer to start over with the new data.
+                            if phrase_time and now - phrase_time > timedelta(seconds=phrase_timeout):
+                                last_sample = bytes()
+                                phrase_complete = True
+                            # This is the last time we received new audio data from the queue.
+                            phrase_time = now
 
-                        # Check if there is a valid tweet news to be displayed
-                        if news_tweet:
-                            an_input = session.prompt(
-                                f"{get_flair()} / $ ",
-                                completer=t_controller.completer,
-                                search_ignore_case=True,
-                                bottom_toolbar=HTML(news_tweet),
-                                style=Style.from_dict(
-                                    {
-                                        "bottom-toolbar": "#ffffff bg:#333333",
-                                    }
-                                ),
+                            # Concatenate our current audio data with the latest audio data.
+                            while not data_queue.empty():
+                                data = data_queue.get()
+                                last_sample += data
+
+                            # Use AudioData to convert the raw data to wav data.
+                            audio_data = sr.AudioData(last_sample, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
+                            wav_data = io.BytesIO(audio_data.get_wav_data())
+
+                            # Write wav data to the temporary file as bytes.
+                            with open(temp_file, 'w+b') as f:
+                                f.write(wav_data.read())
+
+                            # Read the transcription.
+                            result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
+                            text = result['text'].strip()
+
+                            # If we detected a pause between recordings, add a new item to our transcripion.
+                            # Otherwise edit the existing one.
+                            if phrase_complete:
+                                transcription.append(text)
+                            else:
+                                transcription[-1] = text
+
+                            # Clear the console to reprint the updated transcription.
+                            os.system('cls' if os.name=='nt' else 'clear')
+                            for line in transcription:
+                                an_input = line
+                                console.print(f"{get_flair()} / $ {an_input}")
+                            # Flush stdout.
+                            print('', end='', flush=True)
+
+                            # Infinite loops are bad for processors, must sleep.
+                            sleep(0.25)
+
+                            output = difflib.get_close_matches(
+                                an_input,
+                                list(json_doc.keys()),
+                                n=1,
+                                cutoff=0.6,
                             )
 
-                        else:
-                            # Check if toolbar hint was enabled
-                            if current_user.preferences.TOOLBAR_HINT:
+                            if len(output) > 0:
+                                task = output[0]
+                                t_controller.queue = json_doc[task].split("/") + ["home"]
+
+                                console.print(f"{get_flair()} / $ {an_input}\n")
+
+                    except KeyboardInterrupt:
+                        # break
+                        pass
+
+                # There is a command in the queue
+                if t_controller.queue and len(t_controller.queue) > 0:
+                    # If the command is quitting the menu we want to return in here
+                    if t_controller.queue[0] in ("q", "..", "quit"):
+                        print_goodbye()
+                        break
+
+                    # Consume 1 element from the queue
+                    an_input = t_controller.queue[0]
+                    t_controller.queue = t_controller.queue[1:]
+
+                    # Print the current location because this was an instruction and we want user to know what was the action
+                    if an_input and an_input.split(" ")[0] in t_controller.CHOICES_COMMANDS:
+                        console.print(f"{get_flair()} / $ {an_input}")
+
+            else:
+                try:
+                    # Get input from user using auto-completion
+                    if session and current_user.preferences.USE_PROMPT_TOOLKIT:
+                        # Check if tweet news is enabled
+                        if current_user.preferences.TOOLBAR_TWEET_NEWS:
+                            news_tweet = update_news_from_tweet_to_be_displayed()
+
+                            # Check if there is a valid tweet news to be displayed
+                            if news_tweet:
                                 an_input = session.prompt(
                                     f"{get_flair()} / $ ",
                                     completer=t_controller.completer,
                                     search_ignore_case=True,
-                                    bottom_toolbar=HTML(
-                                        '<style bg="ansiblack" fg="ansiwhite">[h]</style> help menu    '
-                                        '<style bg="ansiblack" fg="ansiwhite">[q]</style> return to previous menu'
-                                        '    <style bg="ansiblack" fg="ansiwhite">[e]</style> exit terminal    '
-                                        '<style bg="ansiblack" fg="ansiwhite">[cmd -h]</style> '
-                                        "see usage and available options    "
-                                        '<style bg="ansiblack" fg="ansiwhite">[about (cmd/menu)]</style> '
-                                    ),
+                                    bottom_toolbar=HTML(news_tweet),
                                     style=Style.from_dict(
                                         {
                                             "bottom-toolbar": "#ffffff bg:#333333",
                                         }
                                     ),
                                 )
+
                             else:
-                                an_input = session.prompt(
-                                    f"{get_flair()} / $ ",
-                                    completer=t_controller.completer,
-                                    search_ignore_case=True,
-                                )
+                                # Check if toolbar hint was enabled
+                                if current_user.preferences.TOOLBAR_HINT:
+                                    an_input = session.prompt(
+                                        f"{get_flair()} / $ ",
+                                        completer=t_controller.completer,
+                                        search_ignore_case=True,
+                                        bottom_toolbar=HTML(
+                                            '<style bg="ansiblack" fg="ansiwhite">[h]</style> help menu    '
+                                            '<style bg="ansiblack" fg="ansiwhite">[q]</style> return to previous menu'
+                                            '    <style bg="ansiblack" fg="ansiwhite">[e]</style> exit terminal    '
+                                            '<style bg="ansiblack" fg="ansiwhite">[cmd -h]</style> '
+                                            "see usage and available options    "
+                                            '<style bg="ansiblack" fg="ansiwhite">[about (cmd/menu)]</style> '
+                                        ),
+                                        style=Style.from_dict(
+                                            {
+                                                "bottom-toolbar": "#ffffff bg:#333333",
+                                            }
+                                        ),
+                                    )
+                                else:
+                                    an_input = session.prompt(
+                                        f"{get_flair()} / $ ",
+                                        completer=t_controller.completer,
+                                        search_ignore_case=True,
+                                    )
 
-                    # Check if toolbar hint was enabled
-                    elif current_user.preferences.TOOLBAR_HINT:
-                        an_input = session.prompt(
-                            f"{get_flair()} / $ ",
-                            completer=t_controller.completer,
-                            search_ignore_case=True,
-                            bottom_toolbar=HTML(
-                                '<style bg="ansiblack" fg="ansiwhite">[h]</style> help menu    '
-                                '<style bg="ansiblack" fg="ansiwhite">[q]</style> return to previous menu    '
-                                '<style bg="ansiblack" fg="ansiwhite">[e]</style> exit terminal    '
-                                '<style bg="ansiblack" fg="ansiwhite">[cmd -h]</style> '
-                                "see usage and available options    "
-                                '<style bg="ansiblack" fg="ansiwhite">[about (cmd/menu)]</style> '
-                            ),
-                            style=Style.from_dict(
-                                {
-                                    "bottom-toolbar": "#ffffff bg:#333333",
-                                }
-                            ),
-                        )
+                        # Check if toolbar hint was enabled
+                        elif current_user.preferences.TOOLBAR_HINT:
+                            an_input = session.prompt(
+                                f"{get_flair()} / $ ",
+                                completer=t_controller.completer,
+                                search_ignore_case=True,
+                                bottom_toolbar=HTML(
+                                    '<style bg="ansiblack" fg="ansiwhite">[h]</style> help menu    '
+                                    '<style bg="ansiblack" fg="ansiwhite">[q]</style> return to previous menu    '
+                                    '<style bg="ansiblack" fg="ansiwhite">[e]</style> exit terminal    '
+                                    '<style bg="ansiblack" fg="ansiwhite">[cmd -h]</style> '
+                                    "see usage and available options    "
+                                    '<style bg="ansiblack" fg="ansiwhite">[about (cmd/menu)]</style> '
+                                ),
+                                style=Style.from_dict(
+                                    {
+                                        "bottom-toolbar": "#ffffff bg:#333333",
+                                    }
+                                ),
+                            )
+                        else:
+                            an_input = session.prompt(
+                                f"{get_flair()} / $ ",
+                                completer=t_controller.completer,
+                                search_ignore_case=True,
+                            )
+
+                    elif is_papermill():
+                        pass
+
+                    # Get input from user without auto-completion
                     else:
-                        an_input = session.prompt(
-                            f"{get_flair()} / $ ",
-                            completer=t_controller.completer,
-                            search_ignore_case=True,
-                        )
+                        an_input = input(f"{get_flair()} / $ ")
 
-                elif is_papermill():
-                    pass
+                except (KeyboardInterrupt, EOFError):
+                    print_goodbye()
+                    break
 
-                # Get input from user without auto-completion
-                else:
-                    an_input = input(f"{get_flair()} / $ ")
-
-            except (KeyboardInterrupt, EOFError):
-                print_goodbye()
-                break
+        if WHISPERAI:
+            transcription = ['']
 
         try:
             if an_input == "logout" and is_auth_enabled():
                 break
 
             # Process the input command
+            if not t_controller.queue and " " in an_input:
+                t_controller.call_gpt(an_input.split(" "))
+
+                # Consume 1 element from the queue
+                an_input = t_controller.queue[0]
+                t_controller.queue = t_controller.queue[1:]
+
             t_controller.queue = t_controller.switch(an_input)
 
             if an_input in ("q", "quit", "..", "exit", "e"):
@@ -1057,6 +1290,8 @@ def terminal(jobs_cmds: Optional[List[str]] = None, test_mode=False):
 
                 console.print(f"[green]Replacing by '{an_input}'.[/green]")
                 t_controller.queue.insert(0, an_input)
+
+        # transcription = ['']
 
     if an_input == "logout" and is_auth_enabled():
         return session_controller.main()

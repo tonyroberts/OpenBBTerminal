@@ -8,7 +8,7 @@ import warnings
 from typing import Optional
 
 import whisper
-
+# whisper --video https://www.youtube.com/watch?v=Zc2OaqXMsCc
 try:
     import yt_dlp
 except ModuleNotFoundError as exc:
