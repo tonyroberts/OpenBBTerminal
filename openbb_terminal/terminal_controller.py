@@ -65,6 +65,7 @@ from openbb_terminal.terminal_helper import (
     update_terminal,
     welcome_message,
 )
+from openbb_terminal import gimme_model
 
 # pylint: disable=too-many-public-methods,import-outside-toplevel, too-many-function-args
 # pylint: disable=too-many-branches,no-member,C0302,too-many-return-statements, inconsistent-return-statements
@@ -95,6 +96,7 @@ class TerminalController(BaseController):
         "guess",
         "news",
         "intro",
+        "gimme",
     ]
     CHOICES_MENUS = [
         "stocks",
@@ -362,6 +364,24 @@ class TerminalController(BaseController):
                 f"{current_user.preferences.GUESS_EASTER_EGG_FILE}[/red]"
             )
             console.print(f"[red]{e}[/red]")
+
+    def call_gimme(self, other_args: List[str]) -> None:
+        """Accept user input as a string and return the most appropriate Terminal command"""
+        argparse.ArgumentParser(
+            add_help=False,
+            prog="gimme",
+            description="Accept input as a string and return the most appropriate Terminal command",
+        )
+
+        an_input = (
+            session.prompt("GIVE ME / $ ") if isinstance(session, PromptSession) else ""
+        )
+
+        if an_input:
+            # import gimme_model
+            console.print("Looking for a command...")
+            response = gimme_model.query_LLM(an_input)
+            console.print(f"[green]{response}[/green]")
 
     @staticmethod
     def call_survey(_) -> None:
