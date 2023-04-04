@@ -42,6 +42,14 @@ from pandas.plotting import register_matplotlib_converters
 from PIL import Image, ImageDraw
 from rich.table import Table
 from screeninfo import get_monitors
+from llama_index import GPTSimpleVectorIndex
+from llama_index import (
+    GPTSimpleVectorIndex,
+    SimpleDirectoryReader,
+    PromptHelper,
+    LLMPredictor,
+)
+from langchain.llms import OpenAI
 
 from openbb_terminal import (
     OpenBBFigure,
@@ -49,6 +57,11 @@ from openbb_terminal import (
 )
 from openbb_terminal.core.config.paths import HOME_DIRECTORY
 from openbb_terminal.core.plots.plotly_ta.ta_class import PlotlyTA
+from openbb_terminal.core.config.paths import (
+    MISCELLANEOUS_DIRECTORY,
+)
+from openbb_terminal.decorators import check_api_key
+
 
 # IMPORTS INTERNAL
 from openbb_terminal.core.session.current_user import get_current_user, set_preference
@@ -93,6 +106,9 @@ MENU_QUIT = 1
 MENU_RESET = 2
 
 LAST_TWEET_NEWS_UPDATE_CHECK_TIME = None
+
+GPT_INDEX_DIRECTORY = MISCELLANEOUS_DIRECTORY / "gpt_index/"
+GPT_MODEL_NAME = "gpt-3.5-turbo"
 
 # Command location path to be shown in the figures depending on watermark flag
 command_location = ""
@@ -2221,3 +2237,55 @@ def remove_timezone_from_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         df.index.name = index_name
 
     return df
+
+
+def generate_index():
+    # import from print console and say generating index, this might take a while
+    console.print("Generating index, this might take a while...")
+
+    # read in documents
+    documents = SimpleDirectoryReader(GPT_INDEX_DIRECTORY / "data/").load_data()
+
+    # define LLM
+    llm_predictor = LLMPredictor(llm=OpenAI(temperature=0, model_name=GPT_MODEL_NAME))
+
+    # define prompt helper
+    # set maximum input size
+    max_input_size = 4096
+    # set number of output tokens
+    num_output = 256
+    # set maximum chunk overlap
+    max_chunk_overlap = 20
+    prompt_helper = PromptHelper(max_input_size, num_output, max_chunk_overlap)
+
+    index = GPTSimpleVectorIndex(
+        documents=documents, llm_predictor=llm_predictor, prompt_helper=prompt_helper
+    )
+
+    return index
+
+
+@check_api_key(["API_OPENAI_KEY"])
+def query_LLM(query_text):
+    # check if index exists
+    current_user = get_current_user()
+    os.environ["OPENAI_API_KEY"] = current_user.credentials.API_OPENAI_KEY
+
+    if os.path.exists(GPT_INDEX_DIRECTORY / "index.json"):
+        index = GPTSimpleVectorIndex.load_from_disk(
+            save_path=GPT_INDEX_DIRECTORY / "index.json"
+        )
+    else:
+        index = generate_index()
+
+        # save to disk
+        index.save_to_disk(save_path=GPT_INDEX_DIRECTORY / "index.json")
+
+    response = index.query(
+        f"""From argparse help text above, provide the command for {query_text}.
+        Provide the exact command to get that information, and nothing else.
+        If and only if there is no information in the argparse help text above, say I don't know.
+        """
+    )
+
+    return response.response

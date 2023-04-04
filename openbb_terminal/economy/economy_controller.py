@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
+from prompt_toolkit import PromptSession
 
 from openbb_terminal.core.session.current_user import get_current_user
 from openbb_terminal.custom_prompt_toolkit import NestedCompleter
@@ -45,6 +46,7 @@ from openbb_terminal.helper_funcs import (
     parse_and_split_input,
     print_rich_table,
     valid_date,
+    query_LLM,
 )
 from openbb_terminal.menu import session
 from openbb_terminal.parent_classes import BaseController
@@ -83,6 +85,7 @@ class EconomyController(BaseController):
         "bigmac",
         "events",
         "edebt",
+        "gimme",
     ]
 
     CHOICES_MENUS = [
@@ -345,7 +348,10 @@ class EconomyController(BaseController):
         mt.add_cmd("eval")
         mt.add_cmd("plot")
         mt.add_raw("\n")
+        mt.add_menu("gimme")
+        mt.add_raw("\n")
         mt.add_menu("qa")
+
         console.print(text=mt.menu_text, menu="Economy")
 
     @log_start_end(log=logger)
@@ -2530,3 +2536,24 @@ class EconomyController(BaseController):
             console.print(
                 "[red]Please load a dataset before moving to the qa menu[/red]\n"
             )
+
+    def call_gimme(self, other_args: List[str]) -> None:
+        """Accept user input as a string and return the most appropriate Terminal command"""
+        self.save_class()
+        argparse.ArgumentParser(
+            add_help=False,
+            prog="gimme",
+            description="Accept input as a string and return the most appropriate Terminal command",
+        )
+
+        an_input = (
+            session.prompt("GIVE ME / $ ") if isinstance(session, PromptSession) else ""
+        )
+
+        if an_input:
+            # import gimme_model
+            console.print("Search for the command...")
+            response = query_LLM(an_input)
+            # print a new line
+            console.print("\n")
+            console.print(f"Suggested command: [green]{response}[/green]")
