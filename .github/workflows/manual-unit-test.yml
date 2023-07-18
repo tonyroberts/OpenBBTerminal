@@ -200,6 +200,12 @@ jobs:
           path: ~/conda_pkgs_dir
           key: conda-${{ runner.os }}-v1-${{ matrix.python }}-${{ hashFiles('build/conda/conda-3-9-env-full.yaml') }}
 
+      - name: Update Temp permissions on windows
+        if: runner.os == 'Windows'
+        shell: cmd /C CALL {0}
+        run: >-
+          c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant "everyone":F /t
+
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -213,18 +219,6 @@ jobs:
           activate-environment: testing
           # Needed for caching
           use-only-tar-bz2: true
-
-      - name: Run as admin
-        if: runner.os == 'Windows'
-        shell: cmd /C CALL {0}
-        run: >-
-          powershell.exe -Command "Start-Process cmd -Verb RunAs -ArgumentList '/C c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant `"everyone`":F /t'"
-
-      - name: Update Temp permissions on windows
-        if: runner.os == 'Windows'
-        shell: cmd /C CALL {0}
-        run: >-
-          c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant "everyone":F /t
 
       - name: Get pip cache dir
         shell: bash -l {0}
