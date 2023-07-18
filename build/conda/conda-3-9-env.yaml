@@ -10,7 +10,7 @@ dependencies:
   - pybind11
   - cmake
   # System dependencies
-  - openssl =1.1.1
+  - openssl ==1.1.1
   - libtiff
   # Main dependencies
   - numpy ==1.23.4
