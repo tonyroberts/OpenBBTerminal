@@ -4,23 +4,22 @@ channels:
 dependencies:
   - python =3.9.13
   - git
-  - wheel ==0.40.0
   # Build dependencies
   - pip
   - pybind11
   - cmake
-  # System dependencies
-  - openssl ==1.1.1
   - libtiff
   # Main dependencies
   - numpy ==1.23.4
   # Forecasting dependencies
   - ffmpeg
   - lightgbm ==3.3.5
-  - charset-normalizer ==3.1.0
   # Optimization dependencies
   - cvxpy ==1.2.2
   - pip:
+    # System dependencies
+    - wheel ==0.40.0
+    - charset-normalizer ==3.2.0
     # Build dependencies
     - poetry ==1.4.0
     # Forecasting dependencies
