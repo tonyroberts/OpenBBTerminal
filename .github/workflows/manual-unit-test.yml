@@ -157,7 +157,9 @@ jobs:
         os: ["ubuntu", "macos"]
         python-version: ["3.9"]
         dependencies: [""]
-
+        include:
+          - os: ubuntu
+            python: 3.9
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python }}
@@ -199,7 +201,7 @@ jobs:
           channels: conda-forge,defaults
           show-channel-urls: true
           channel-priority: flexible
-          environment-file: build/conda/conda-3-9-env.yml
+          environment-file: build/conda/conda-3-9-env.yaml
           activate-environment: testing
           # Needed for caching
           use-only-tar-bz2: true
