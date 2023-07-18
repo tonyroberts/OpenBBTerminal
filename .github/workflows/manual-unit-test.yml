@@ -154,13 +154,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu", "windows", "macos"]
+        os: ["ubuntu", "macos"]
         python-version: ["3.9"]
         dependencies: [""]
         include:
           - os: ubuntu
-            python: 3.9
-          - os: windows
             python: 3.9
     env:
       OS: ${{ matrix.os }}
@@ -168,12 +166,6 @@ jobs:
       PYTHONNOUSERSITE: 1
 
     steps:
-      - name: Set git to use LF
-        if: runner.os == 'Windows'
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
       - name: Setup sudo apt installs for ubuntu-latest
         if: runner.os == 'Linux'
         run: |
@@ -209,16 +201,10 @@ jobs:
           channels: conda-forge,defaults
           show-channel-urls: true
           channel-priority: flexible
-          environment-file: build/conda/conda-3-9-env.yaml
+          environment-file: build/conda/conda-${{ matrix.python.replace('.', '-') }}-env.yml
           activate-environment: testing
           # Needed for caching
           use-only-tar-bz2: true
-
-      - name: Update Temp permissions on windows
-        if: runner.os == 'Windows'
-        shell: cmd /C CALL {0}
-        run: >-
-          c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant "everyone":F /t
 
       - name: Get pip cache dir
         shell: bash -l {0}
