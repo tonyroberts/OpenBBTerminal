@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python =3.9.13
   - git
+  - wheel=0.40.0=pyhd8ed1ab_1
   # Build dependencies
   - pip
   - pybind11
@@ -14,12 +15,12 @@ dependencies:
   # Forecasting dependencies
   - ffmpeg
   - lightgbm ==3.3.5
+  - charset-normalizer=3.1.0=pyhd8ed1ab_0
   # Optimization dependencies
   - cvxpy ==1.2.2
   - pip:
     # System dependencies
-    - wheel ==0.40.0
-    - charset-normalizer ==3.2.0
+    - openssl =1.1.1
     # Build dependencies
     - poetry ==1.4.0
     # Forecasting dependencies
