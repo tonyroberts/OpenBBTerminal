@@ -215,10 +215,10 @@ jobs:
           use-only-tar-bz2: true
 
       - name: Run as admin
-          if: runner.os == 'Windows'
-          shell: cmd /C CALL {0}
-          run: >-
-            powershell.exe -Command "Start-Process cmd -Verb RunAs -ArgumentList '/C c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant `"everyone`":F /t'"
+        if: runner.os == 'Windows'
+        shell: cmd /C CALL {0}
+        run: >-
+          powershell.exe -Command "Start-Process cmd -Verb RunAs -ArgumentList '/C c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant `"everyone`":F /t'"
 
       - name: Update Temp permissions on windows
         if: runner.os == 'Windows'
