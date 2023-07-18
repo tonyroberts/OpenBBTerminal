@@ -155,13 +155,13 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu", "windows", "macos"]
-        python-version: ["3.9"]
+        python-version: ["3.9", "3.10"]
         dependencies: [""]
         include:
           - os: ubuntu
             python: 3.9
           - os: windows
-            python: 3.9
+            python: 3.10
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python }}
@@ -200,12 +200,6 @@ jobs:
           path: ~/conda_pkgs_dir
           key: conda-${{ runner.os }}-v1-${{ matrix.python }}-${{ hashFiles('build/conda/conda-3-9-env-full.yaml') }}
 
-      - name: Update Temp permissions on windows
-        if: runner.os == 'Windows'
-        shell: cmd /C CALL {0}
-        run: >-
-          c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant "everyone":F /t
-
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -215,10 +209,16 @@ jobs:
           channels: conda-forge,defaults
           show-channel-urls: true
           channel-priority: flexible
-          environment-file: build/conda/conda-3-9-env.yaml
+          environment-file: build/conda/conda-3-10-env.yaml
           activate-environment: testing
           # Needed for caching
           use-only-tar-bz2: true
+
+      - name: Update Temp permissions on windows
+        if: runner.os == 'Windows'
+        shell: cmd /C CALL {0}
+        run: >-
+          c:\windows\system32\icacls C:\Users\runneradmin\AppData\Local\Temp /grant "everyone":F /t
 
       - name: Get pip cache dir
         shell: bash -l {0}
